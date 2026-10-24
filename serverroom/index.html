@@ -299,6 +299,16 @@
         font-size: 0.68rem;
         margin-top: 4px;
       }
+      #fps {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        padding: 4px 10px;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--muted);
+        pointer-events: none;
+      }
       .status {
         position: fixed;
         inset: 0;
@@ -328,6 +338,10 @@
         #tip {
           max-width: calc(100vw - 32px);
         }
+        #fps {
+          right: 8px;
+          bottom: calc(32vh + 16px);
+        }
       }
     </style>
   </head>
@@ -355,6 +369,7 @@
       <p>Respawning at the exit…</p>
     </div>
     <div class="panel" id="tip" role="status"></div>
+    <div class="panel" id="fps" hidden></div>
     <div class="status" id="status">Powering up…</div>
     <script type="module">
       import * as THREE from "three";
@@ -2087,6 +2102,11 @@
       addEventListener("keydown", (e) => {
         if (e.target.closest && e.target.closest("button, a, input")) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.code === "KeyF") {
+          fps.el.hidden = !fps.el.hidden;
+          e.preventDefault();
+          return;
+        }
         if (walk.on && e.key === "Shift") walk.keys.add(e.code);
         if (WALK_KEYS[e.code] && (walk.on || !e.code.startsWith("Arrow"))) {
           setWalk(true);
@@ -2750,6 +2770,19 @@
       }
       addEventListener("resize", resize);
 
+      // Frames a second, over half a second at a time; F shows or hides it,
+      // and ?fps in the address shows it from the start
+      const fps = { el: document.getElementById("fps"), frames: 0, since: performance.now() };
+      fps.el.hidden = !new URLSearchParams(location.search).has("fps");
+      function countFrame() {
+        fps.frames++;
+        const now = performance.now();
+        if (now - fps.since < 500) return;
+        if (!fps.el.hidden) fps.el.textContent = `${Math.round((fps.frames * 1000) / (now - fps.since))} FPS`;
+        fps.frames = 0;
+        fps.since = now;
+      }
+
       function tick() {
         const dt = Math.min(clock.getDelta(), 0.1);
         const t = clock.elapsedTime;
@@ -2806,6 +2839,7 @@
           });
         }
         renderer.render(scene, camera);
+        countFrame();
         requestAnimationFrame(tick);
       }
 
